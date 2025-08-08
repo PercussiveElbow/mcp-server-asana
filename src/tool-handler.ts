@@ -138,8 +138,8 @@ export function tool_handler(asanaClient: AsanaClientWrapper): (request: CallToo
       switch (request.params.name) {
         // note: list_workspaces and search_projects removed from registry
         case "asana_search_tasks": {
-          const { workspace, ...searchOpts } = args;
-          const response = await asanaClient.searchTasks(workspace, searchOpts);
+          const { workspace: _ignored, ...searchOpts } = args;
+          const response = await asanaClient.searchTasks(searchOpts);
           return { content: [{ type: "text", text: JSON.stringify(response) }] };
         }
 
@@ -156,26 +156,26 @@ export function tool_handler(asanaClient: AsanaClientWrapper): (request: CallToo
         }
 
         case "asana_get_project": {
-          const { project_id, ...opts } = args;
-          const response = await asanaClient.getProject(project_id, opts);
+          const { project_id: _ignored, ...opts } = args;
+          const response = await asanaClient.getProject(process.env.ASANA_PROJECT_GID as string, opts);
           return { content: [{ type: "text", text: JSON.stringify(response) }] };
         }
 
         case "asana_get_project_task_counts": {
-          const { project_id, ...opts } = args;
-          const response = await asanaClient.getProjectTaskCounts(project_id, opts);
+          const { project_id: _ignored, ...opts } = args;
+          const response = await asanaClient.getProjectTaskCounts(process.env.ASANA_PROJECT_GID as string, opts);
           return { content: [{ type: "text", text: JSON.stringify(response) }] };
         }
 
         case "asana_get_project_statuses": {
-          const { project_gid, ...opts } = args;
-          const response = await asanaClient.getProjectStatusesForProject(project_gid, opts);
+          const { project_gid: _ignored, ...opts } = args;
+          const response = await asanaClient.getProjectStatusesForProject(process.env.ASANA_PROJECT_GID as string, opts);
           return { content: [{ type: "text", text: JSON.stringify(response) }] };
         }
 
         case "asana_get_project_sections": {
-          const { project_id, ...opts } = args;
-          const response = await asanaClient.getProjectSections(project_id, opts);
+          const { project_id: _ignored, ...opts } = args;
+          const response = await asanaClient.getProjectSections(process.env.ASANA_PROJECT_GID as string, opts);
           return { content: [{ type: "text", text: JSON.stringify(response) }] };
         }
 

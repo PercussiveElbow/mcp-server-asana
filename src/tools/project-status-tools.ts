@@ -21,14 +21,10 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const getProjectStatusesForProjectTool: Tool = {
   name: "asana_get_project_statuses",
-  description: "Get all status updates for a project",
+  description: "Get all status updates for the configured project",
   inputSchema: {
     type: "object",
     properties: {
-      project_gid: {
-        type: "string",
-        description: "The project GID to get statuses for"
-      },
       limit: {
         type: "number",
         description: "Results per page (1-100)",
@@ -44,7 +40,7 @@ export const getProjectStatusesForProjectTool: Tool = {
         description: "Comma-separated list of optional fields to include"
       }
     },
-    required: ["project_gid"]
+    required: []
   }
 };
 

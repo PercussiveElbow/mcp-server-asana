@@ -44,9 +44,9 @@ export class AsanaClientWrapper {
     return response.data.filter((project: any) => project.gid === this.allowedProjectGid && pattern.test(project.name));
   }
 
-  async searchTasks(workspace: string, searchOpts: any = {}) {
+  async searchTasks(searchOpts: any = {}) {
     // Force workspace to allowed workspace
-    workspace = this.allowedWorkspaceGid;
+    const workspace = this.allowedWorkspaceGid;
     // Always scope search to the allowed project using projects.any
     const { projects_any, projects_not, projects_all, opt_fields, ...rest } = searchOpts;
     const scopedSearchOpts = { ...rest };

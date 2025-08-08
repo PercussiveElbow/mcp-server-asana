@@ -30,57 +30,45 @@ export const searchProjectsTool: Tool = {
 
 export const getProjectTool: Tool = {
   name: "asana_get_project",
-  description: "Get detailed information about a specific project",
+  description: "Get detailed information about the configured project",
   inputSchema: {
     type: "object",
     properties: {
-      project_id: {
-        type: "string",
-        description: "The project ID to retrieve"
-      },
       opt_fields: {
         type: "string",
         description: "Comma-separated list of optional fields to include"
       }
     },
-    required: ["project_id"]
+    required: []
   }
 };
 
 export const getProjectTaskCountsTool: Tool = {
   name: "asana_get_project_task_counts",
-  description: "Get the number of tasks in a project",
+  description: "Get the number of tasks in the configured project",
   inputSchema: {
     type: "object",
     properties: {
-      project_id: {
-        type: "string",
-        description: "The project ID to get task counts for"
-      },
       opt_fields: {
         type: "string",
         description: "Comma-separated list of optional fields to include"
       }
     },
-    required: ["project_id"]
+    required: []
   }
 };
 
 export const getProjectSectionsTool: Tool = {
   name: "asana_get_project_sections",
-  description: "Get sections in a project",
+  description: "Get sections in the configured project",
   inputSchema: {
     type: "object",
     properties: {
-      project_id: {
-        type: "string",
-        description: "The project ID to get sections for"
-      },
       opt_fields: {
         type: "string",
         description: "Comma-separated list of optional fields to include"
       }
     },
-    required: ["project_id"]
+    required: []
   }
 };

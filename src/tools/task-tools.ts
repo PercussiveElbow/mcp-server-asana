@@ -2,14 +2,10 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 export const searchTasksTool: Tool = {
   name: "asana_search_tasks",
-  description: "Search tasks in a workspace with advanced filtering options",
+  description: "Search tasks in the configured workspace/project with advanced filtering options",
   inputSchema: {
     type: "object",
     properties: {
-      workspace: {
-        type: "string",
-        description: "The workspace to search in"
-      },
       text: {
         type: "string",
         description: "Text to search for in task names and descriptions"
@@ -237,7 +233,7 @@ export const searchTasksTool: Tool = {
 Example: { "12345.value": "high", "67890.contains": "urgent" }`
       }
     },
-    required: ["workspace"]
+    required: []
   }
 };
 
