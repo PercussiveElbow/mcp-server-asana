@@ -8,8 +8,10 @@ export class AsanaClientWrapper {
   private projectStatuses: any;
   private tags: any;
   private customFieldSettings: any;
+  private allowedProjectGid: string;
+  private allowedWorkspaceGid: string;
 
-  constructor(token: string) {
+  constructor(token: string, allowedProjectGid: string, allowedWorkspaceGid: string) {
     const client = Asana.ApiClient.instance;
     client.authentications['token'].accessToken = token;
 
@@ -21,77 +23,62 @@ export class AsanaClientWrapper {
     this.projectStatuses = new Asana.ProjectStatusesApi();
     this.tags = new Asana.TagsApi();
     this.customFieldSettings = new Asana.CustomFieldSettingsApi();
+    this.allowedProjectGid = allowedProjectGid;
+    this.allowedWorkspaceGid = allowedWorkspaceGid;
   }
 
   async listWorkspaces(opts: any = {}) {
+    // Only return the allowed workspace
     const response = await this.workspaces.getWorkspaces(opts);
-    return response.data;
+    return (response.data || []).filter((ws: any) => ws.gid === this.allowedWorkspaceGid);
   }
 
   async searchProjects(workspace: string, namePattern: string, archived: boolean = false, opts: any = {}) {
+    // Force workspace to allowed workspace
+    workspace = this.allowedWorkspaceGid;
     const response = await this.projects.getProjectsForWorkspace(workspace, {
       archived,
       ...opts
     });
     const pattern = new RegExp(namePattern, 'i');
-    return response.data.filter((project: any) => pattern.test(project.name));
+    return response.data.filter((project: any) => project.gid === this.allowedProjectGid && pattern.test(project.name));
   }
 
   async searchTasks(workspace: string, searchOpts: any = {}) {
-    // Extract known parameters
-    const {
-      text,
-      resource_subtype,
-      completed,
-      is_subtask,
-      has_attachment,
-      is_blocked,
-      is_blocking,
-      sort_by,
-      sort_ascending,
-      opt_fields,
-      ...otherOpts
-    } = searchOpts;
+    // Force workspace to allowed workspace
+    workspace = this.allowedWorkspaceGid;
+    // Always scope search to the allowed project using projects.any
+    const { projects_any, projects_not, projects_all, opt_fields, ...rest } = searchOpts;
+    const scopedSearchOpts = { ...rest };
 
     // Build search parameters
     const searchParams: any = {
-      ...otherOpts // Include any additional filter parameters
+      ...scopedSearchOpts
     };
 
-    // Handle custom fields if provided
-    if (searchOpts.custom_fields) {
-      if ( typeof searchOpts.custom_fields == "string" ) {
-        try {
-          searchOpts.custom_fields = JSON.parse( searchOpts.custom_fields );
-        } catch ( err ) {
-          if (err instanceof Error) {
-            err.message = "custom_fields must be a JSON object : " + err.message;
-          }
-          throw err;
-        }
-      }
-      Object.entries(searchOpts.custom_fields).forEach(([key, value]) => {
-        searchParams[`custom_fields.${key}`] = value;
-      });
-      delete searchParams.custom_fields; // Remove the custom_fields object since we've processed it
-    }
+    // Enforce project scoping
+    searchParams['projects.any'] = this.allowedProjectGid;
 
-    // Add optional parameters if provided
-    if (text) searchParams.text = text;
-    if (resource_subtype) searchParams.resource_subtype = resource_subtype;
-    if (completed !== undefined) searchParams.completed = completed;
-    if (is_subtask !== undefined) searchParams.is_subtask = is_subtask;
-    if (has_attachment !== undefined) searchParams.has_attachment = has_attachment;
-    if (is_blocked !== undefined) searchParams.is_blocked = is_blocked;
-    if (is_blocking !== undefined) searchParams.is_blocking = is_blocking;
-    if (sort_by) searchParams.sort_by = sort_by;
-    if (sort_ascending !== undefined) searchParams.sort_ascending = sort_ascending;
-    if (opt_fields) searchParams.opt_fields = opt_fields;
+    // Ensure we request projects in the response so we can filter locally as a safety net
+    const requiredFields = ['projects'];
+    if (opt_fields && typeof opt_fields === 'string' && opt_fields.trim().length > 0) {
+      const parts = opt_fields.split(',').map((s: string) => s.trim()).filter(Boolean);
+      requiredFields.forEach((f) => { if (!parts.includes(f)) parts.push(f); });
+      searchParams.opt_fields = parts.join(',');
+    } else {
+      searchParams.opt_fields = requiredFields.join(',');
+    }
 
     const response = await this.tasks.searchTasksForWorkspace(workspace, searchParams);
 
+    // Safety net: filter any tasks that somehow are not in the allowed project
+    const filtered = (response.data || []).filter((task: any) => {
+      const projects = Array.isArray(task?.projects) ? task.projects : [];
+      return projects.some((p: any) => p?.gid === this.allowedProjectGid);
+    });
+
     // Transform the response to simplify custom fields if present
-    const transformedData = response.data.map((task: any) => {
+    const transformedData = filtered.map((task: any) => {
       if (!task.custom_fields) return task;
 
       return {
@@ -114,12 +101,23 @@ export class AsanaClientWrapper {
     return transformedData;
   }
 
+  private ensureTaskInAllowedProject = async (taskId: string) => {
+    const task = await this.tasks.getTask(taskId, { opt_fields: 'projects' });
+    const inProject = Array.isArray(task.data?.projects) && task.data.projects.some((p: any) => p.gid === this.allowedProjectGid);
+    if (!inProject) {
+      throw new Error(`Access to task ${taskId} is denied. Task is not in allowed project ${this.allowedProjectGid}.`);
+    }
+  }
+
   async getTask(taskId: string, opts: any = {}) {
+    await this.ensureTaskInAllowedProject(taskId);
     const response = await this.tasks.getTask(taskId, opts);
     return response.data;
   }
 
   async createTask(projectId: string, data: any) {
+    // Override projectId to the allowed project
+    projectId = this.allowedProjectGid;
     // Ensure projects array includes the projectId
     const projects = data.projects || [];
     if (!projects.includes(projectId)) {
@@ -141,11 +139,13 @@ export class AsanaClientWrapper {
   }
 
   async getStoriesForTask(taskId: string, opts: any = {}) {
+    await this.ensureTaskInAllowedProject(taskId);
     const response = await this.stories.getStoriesForTask(taskId, opts);
     return response.data;
   }
 
   async updateTask(taskId: string, data: any) {
+    await this.ensureTaskInAllowedProject(taskId);
     const body = {
       data: {
         ...data,
@@ -161,6 +161,9 @@ export class AsanaClientWrapper {
   }
 
   async getProject(projectId: string, opts: any = {}) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     // Only include opts if opt_fields was actually provided
     const options = opts.opt_fields ? opts : {};
     const response = await this.projects.getProject(projectId, options);
@@ -168,6 +171,9 @@ export class AsanaClientWrapper {
   }
 
   async getProjectCustomFieldSettings(projectId: string, opts: any = {}) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     try {
       const options = {
         limit: 100,
@@ -183,6 +189,9 @@ export class AsanaClientWrapper {
   }
 
   async getProjectTaskCounts(projectId: string, opts: any = {}) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     // Only include opts if opt_fields was actually provided
     const options = opts.opt_fields ? opts : {};
     const response = await this.projects.getTaskCountsForProject(projectId, options);
@@ -190,6 +199,9 @@ export class AsanaClientWrapper {
   }
 
   async getProjectSections(projectId: string, opts: any = {}) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     // Only include opts if opt_fields was actually provided
     const options = opts.opt_fields ? opts : {};
     const sections = new Asana.SectionsApi();
@@ -198,6 +210,7 @@ export class AsanaClientWrapper {
   }
 
   async createTaskStory(taskId: string, text: string | null = null, opts: any = {}, html_text: string | null = null) {
+    await this.ensureTaskInAllowedProject(taskId);
     const options = opts.opt_fields ? opts : {};
     const data: any = {};
 
@@ -215,6 +228,7 @@ export class AsanaClientWrapper {
   }
 
   async addTaskDependencies(taskId: string, dependencies: string[]) {
+    await this.ensureTaskInAllowedProject(taskId);
     const body = {
       data: {
         dependencies: dependencies
@@ -225,6 +239,7 @@ export class AsanaClientWrapper {
   }
 
   async addTaskDependents(taskId: string, dependents: string[]) {
+    await this.ensureTaskInAllowedProject(taskId);
     const body = {
       data: {
         dependents: dependents
@@ -235,6 +250,7 @@ export class AsanaClientWrapper {
   }
 
   async createSubtask(parentTaskId: string, data: any, opts: any = {}) {
+    await this.ensureTaskInAllowedProject(parentTaskId);
     const taskData = {
       data: {
         ...data
@@ -245,27 +261,45 @@ export class AsanaClientWrapper {
   }
 
   async setParentForTask(data: any, taskId: string, opts: any = {}) {
+    await this.ensureTaskInAllowedProject(taskId);
     const response = await this.tasks.setParentForTask({ data }, taskId, opts);
     return response.data;
   }
 
   async getProjectStatus(statusId: string, opts: any = {}) {
-    const response = await this.projectStatuses.getProjectStatus(statusId, opts);
-    return response.data;
+    // Disallow fetching a status by ID directly in restricted mode to prevent cross-project access
+    throw new Error("Access to project status by ID is not allowed in project-restricted mode. Use getProjectStatusesForProject instead.");
   }
 
   async getProjectStatusesForProject(projectId: string, opts: any = {}) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     const response = await this.projectStatuses.getProjectStatusesForProject(projectId, opts);
     return response.data;
   }
 
   async createProjectStatus(projectId: string, data: any) {
+    if (projectId !== this.allowedProjectGid) {
+      throw new Error(`Access to project ${projectId} is denied. Only project ${this.allowedProjectGid} is allowed.`);
+    }
     const body = { data };
     const response = await this.projectStatuses.createProjectStatusForProject(body, projectId);
     return response.data;
   }
 
   async deleteProjectStatus(statusId: string) {
+    // Best-effort validation: fetch status to ensure it belongs to allowed project
+    try {
+      const status = await (this.projectStatuses as any).getProjectStatus(statusId, { opt_fields: 'project' });
+      const projectGid = status?.data?.project?.gid || status?.data?.parent?.gid;
+      if (projectGid && projectGid !== this.allowedProjectGid) {
+        throw new Error(`Access to project status ${statusId} is denied. It does not belong to project ${this.allowedProjectGid}.`);
+      }
+    } catch (err) {
+      // If we cannot determine project ownership, deny to be safe
+      throw new Error("Unable to verify project ownership for project status; deletion is not allowed in restricted mode.");
+    }
     const response = await this.projectStatuses.deleteProjectStatus(statusId);
     return response.data;
   }
@@ -275,21 +309,28 @@ export class AsanaClientWrapper {
       throw new Error("Maximum of 25 task IDs allowed");
     }
 
-    // Use Promise.all to fetch tasks in parallel
+    // Use Promise.all to fetch tasks in parallel (with project validation per task)
     const tasks = await Promise.all(
-      taskIds.map(taskId => this.getTask(taskId, opts))
+      taskIds.map(async taskId => {
+        await this.ensureTaskInAllowedProject(taskId);
+        return this.getTask(taskId, opts);
+      })
     );
 
-    return tasks;
+    // Safety net: filter any tasks that somehow are not in the allowed project
+    return tasks.filter((task: any) => {
+      const projects = Array.isArray(task?.projects) ? task.projects : [];
+      return projects.some((p: any) => p?.gid === this.allowedProjectGid);
+    });
   }
 
   async getTasksForTag(tag_gid: string, opts: any = {}) {
-    const response = await this.tasks.getTasksForTag(tag_gid, opts);
-    return response.data;
+    // We cannot scope tags to project directly; reject to prevent cross-project data
+    throw new Error("Access to tags across workspace is not allowed in project-restricted mode.");
   }
 
   async getTagsForWorkspace(workspace_gid: string, opts: any = {}) {
-    const response = await this.tags.getTagsForWorkspace(workspace_gid, opts);
-    return response.data;
+    // Disallow broad workspace tag listing in restricted mode
+    throw new Error("Access to workspace tags is not allowed in project-restricted mode.");
   }
 }

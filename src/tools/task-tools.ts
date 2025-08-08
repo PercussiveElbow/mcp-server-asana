@@ -260,148 +260,148 @@ export const getTaskTool: Tool = {
   }
 };
 
-export const createTaskTool: Tool = {
-  name: "asana_create_task",
-  description: "Create a new task in a project",
-  inputSchema: {
-    type: "object",
-    properties: {
-      project_id: {
-        type: "string",
-        description: "The project to create the task in"
-      },
-      name: {
-        type: "string",
-        description: "Name of the task"
-      },
-      notes: {
-        type: "string",
-        description: "Description of the task"
-      },
-      html_notes: {
-        type: "string",
-        description: "HTML-like formatted description of the task. Does not support ALL HTML tags. Only a subset. The only allowed TAG in the HTML are: <body> <h1> <h2> <ol> <ul> <li> <strong> <em> <u> <s> <code> <pre> <blockquote> <a data-asana-type=\"\" data-asana-gid=\"\"> <hr> <img> <table> <tr> <td>. No other tags are allowed. Use the \\n to create a newline. Do not use \\n after <body>. Example: <body><h1>Motivation</h1>\nA customer called in to complain\n<h1>Goal</h1>\nFix the problem</body>"
-      },
-      due_on: {
-        type: "string",
-        description: "Due date in YYYY-MM-DD format"
-      },
-      assignee: {
-        type: "string",
-        description: "Assignee (can be 'me' or a user ID)"
-      },
-      followers: {
-        type: "array",
-        items: {
-          type: "string"
-        },
-        description: "Array of user IDs to add as followers"
-      },
-      parent: {
-        type: "string",
-        description: "The parent task ID to set this task under"
-      },
-      projects: {
-        type: "array",
-        items: {
-          type: "string"
-        },
-        description: "Array of project IDs to add this task to"
-      },
-      resource_subtype: {
-        type: "string",
-        description: "The type of the task. Can be one of 'default_task' or 'milestone'"
-      },
-      custom_fields: {
-        type: "object",
-        description: "Object mapping custom field GID strings to their values. For enum fields use the enum option GID as the value."
-      }
-    },
-    required: ["project_id", "name"]
-  }
-};
+// export const createTaskTool: Tool = {
+//   name: "asana_create_task",
+//   description: "Create a new task in a project",
+//   inputSchema: {
+//     type: "object",
+//     properties: {
+//       project_id: {
+//         type: "string",
+//         description: "The project to create the task in"
+//       },
+//       name: {
+//         type: "string",
+//         description: "Name of the task"
+//       },
+//       notes: {
+//         type: "string",
+//         description: "Description of the task"
+//       },
+//       html_notes: {
+//         type: "string",
+//         description: "HTML-like formatted description of the task. Does not support ALL HTML tags. Only a subset. The only allowed TAG in the HTML are: <body> <h1> <h2> <ol> <ul> <li> <strong> <em> <u> <s> <code> <pre> <blockquote> <a data-asana-type=\"\" data-asana-gid=\"\"> <hr> <img> <table> <tr> <td>. No other tags are allowed. Use the \\n to create a newline. Do not use \\n after <body>. Example: <body><h1>Motivation</h1>\nA customer called in to complain\n<h1>Goal</h1>\nFix the problem</body>"
+//       },
+//       due_on: {
+//         type: "string",
+//         description: "Due date in YYYY-MM-DD format"
+//       },
+//       assignee: {
+//         type: "string",
+//         description: "Assignee (can be 'me' or a user ID)"
+//       },
+//       followers: {
+//         type: "array",
+//         items: {
+//           type: "string"
+//         },
+//         description: "Array of user IDs to add as followers"
+//       },
+//       parent: {
+//         type: "string",
+//         description: "The parent task ID to set this task under"
+//       },
+//       projects: {
+//         type: "array",
+//         items: {
+//           type: "string"
+//         },
+//         description: "Array of project IDs to add this task to"
+//       },
+//       resource_subtype: {
+//         type: "string",
+//         description: "The type of the task. Can be one of 'default_task' or 'milestone'"
+//       },
+//       custom_fields: {
+//         type: "object",
+//         description: "Object mapping custom field GID strings to their values. For enum fields use the enum option GID as the value."
+//       }
+//     },
+//     required: ["project_id", "name"]
+//   }
+// };
 
-export const updateTaskTool: Tool = {
-  name: "asana_update_task",
-  description: "Update an existing task's details",
-  inputSchema: {
-    type: "object",
-    properties: {
-      task_id: {
-        type: "string",
-        description: "The task ID to update"
-      },
-      name: {
-        type: "string",
-        description: "New name for the task"
-      },
-      notes: {
-        type: "string",
-        description: "New description for the task"
-      },
-      due_on: {
-        type: "string",
-        description: "New due date in YYYY-MM-DD format"
-      },
-      assignee: {
-        type: "string",
-        description: "New assignee (can be 'me' or a user ID)"
-      },
-      completed: {
-        type: "boolean",
-        description: "Mark task as completed or not"
-      },
-      resource_subtype: {
-        type: "string",
-        description: "The type of the task. Can be one of 'default_task' or 'milestone'"
-      },
-      custom_fields: {
-        type: "object",
-        description: "Object mapping custom field GID strings to their values. For enum fields use the enum option GID as the value."
-      }
-    },
-    required: ["task_id"]
-  }
-};
+// export const updateTaskTool: Tool = {
+//   name: "asana_update_task",
+//   description: "Update an existing task's details",
+//   inputSchema: {
+//     type: "object",
+//     properties: {
+//       task_id: {
+//         type: "string",
+//         description: "The task ID to update"
+//       },
+//       name: {
+//         type: "string",
+//         description: "New name for the task"
+//       },
+//       notes: {
+//         type: "string",
+//         description: "New description for the task"
+//       },
+//       due_on: {
+//         type: "string",
+//         description: "New due date in YYYY-MM-DD format"
+//       },
+//       assignee: {
+//         type: "string",
+//         description: "New assignee (can be 'me' or a user ID)"
+//       },
+//       completed: {
+//         type: "boolean",
+//         description: "Mark task as completed or not"
+//       },
+//       resource_subtype: {
+//         type: "string",
+//         description: "The type of the task. Can be one of 'default_task' or 'milestone'"
+//       },
+//       custom_fields: {
+//         type: "object",
+//         description: "Object mapping custom field GID strings to their values. For enum fields use the enum option GID as the value."
+//       }
+//     },
+//     required: ["task_id"]
+//   }
+// };
 
-export const createSubtaskTool: Tool = {
-  name: "asana_create_subtask",
-  description: "Create a new subtask for an existing task",
-  inputSchema: {
-    type: "object",
-    properties: {
-      parent_task_id: {
-        type: "string",
-        description: "The parent task ID to create the subtask under"
-      },
-      name: {
-        type: "string",
-        description: "Name of the subtask"
-      },
-      notes: {
-        type: "string",
-        description: "Description of the subtask"
-      },
-      html_notes: {
-        type: "string",
-        description: "HTML-like formatted description of the subtask. Does not support ALL HTML tags. Only a subset. The only allowed TAG in the HTML are: <body> <h1> <h2> <ol> <ul> <li> <strong> <em> <u> <s> <code> <pre> <blockquote> <a data-asana-type=\"\" data-asana-gid=\"\"> <hr> <img> <table> <tr> <td>. No other tags are allowed. Use the \\n to create a newline. Do not use \\n after <body>. Example: <body><h1>Motivation</h1>\nA customer called in to complain\n<h1>Goal</h1>\nFix the problem</body>"
-      },
-      due_on: {
-        type: "string",
-        description: "Due date in YYYY-MM-DD format"
-      },
-      assignee: {
-        type: "string",
-        description: "Assignee (can be 'me' or a user ID)"
-      },
-      opt_fields: {
-        type: "string",
-        description: "Comma-separated list of optional fields to include"
-      }
-    },
-    required: ["parent_task_id", "name"]
-  }
-};
+// export const createSubtaskTool: Tool = {
+//   name: "asana_create_subtask",
+//   description: "Create a new subtask for an existing task",
+//   inputSchema: {
+//     type: "object",
+//     properties: {
+//       parent_task_id: {
+//         type: "string",
+//         description: "The parent task ID to create the subtask under"
+//       },
+//       name: {
+//         type: "string",
+//         description: "Name of the subtask"
+//       },
+//       notes: {
+//         type: "string",
+//         description: "Description of the subtask"
+//       },
+//       html_notes: {
+//         type: "string",
+//         description: "HTML-like formatted description of the subtask. Does not support ALL HTML tags. Only a subset. The only allowed TAG in the HTML are: <body> <h1> <h2> <ol> <ul> <li> <strong> <em> <u> <s> <code> <pre> <blockquote> <a data-asana-type=\"\" data-asana-gid=\"\"> <hr> <img> <table> <tr> <td>. No other tags are allowed. Use the \\n to create a newline. Do not use \\n after <body>. Example: <body><h1>Motivation</h1>\nA customer called in to complain\n<h1>Goal</h1>\nFix the problem</body>"
+//       },
+//       due_on: {
+//         type: "string",
+//         description: "Due date in YYYY-MM-DD format"
+//       },
+//       assignee: {
+//         type: "string",
+//         description: "Assignee (can be 'me' or a user ID)"
+//       },
+//       opt_fields: {
+//         type: "string",
+//         description: "Comma-separated list of optional fields to include"
+//       }
+//     },
+//     required: ["parent_task_id", "name"]
+//   }
+// };
 
 export const getMultipleTasksByGidTool: Tool = {
   name: "asana_get_multiple_tasks_by_gid",
