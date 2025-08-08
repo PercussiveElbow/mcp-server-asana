@@ -28,9 +28,8 @@ async function main() {
       'util',
       'events',
       'buffer',
-      'querystring',
-      'asana',
-      'jsdom',
+      'querystring'
+      // Removed: 'asana', 'jsdom' to enable fully bundled runtime
     ]
   });
 }

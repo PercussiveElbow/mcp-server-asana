@@ -18,13 +18,25 @@ import { createResourceHandlers } from './resource-handler.js';
 
 async function main() {
   const asanaToken = process.env.ASANA_ACCESS_TOKEN;
+  const allowedProjectGid = process.env.ASANA_PROJECT_GID;
+  const allowedWorkspaceGid = process.env.ASANA_WORKSPACE_GID;
 
   if (!asanaToken) {
     console.error("Please set ASANA_ACCESS_TOKEN environment variable");
     process.exit(1);
   }
 
-  console.error("Starting Asana MCP Server...");
+  if (!allowedProjectGid) {
+    console.error("Please set ASANA_PROJECT_GID environment variable to the allowed project GID");
+    process.exit(1);
+  }
+
+  if (!allowedWorkspaceGid) {
+    console.error("Please set ASANA_WORKSPACE_GID environment variable to the allowed workspace GID");
+    process.exit(1);
+  }
+
+  console.error("Starting Asana MCP Server (restricted to project)", allowedProjectGid, "in workspace", allowedWorkspaceGid);
   const server = new Server(
     {
       name: "Asana MCP Server",
@@ -39,7 +51,7 @@ async function main() {
     }
   );
 
-  const asanaClient = new AsanaClientWrapper(asanaToken);
+  const asanaClient = new AsanaClientWrapper(asanaToken, allowedProjectGid, allowedWorkspaceGid);
 
   server.setRequestHandler(
     CallToolRequestSchema,
@@ -60,7 +72,7 @@ async function main() {
   server.setRequestHandler(GetPromptRequestSchema, promptHandlers.getPrompt);
 
   // Add resource handlers
-  const resourceHandlers = createResourceHandlers(asanaClient);
+  const resourceHandlers = createResourceHandlers(asanaClient, allowedProjectGid);
   server.setRequestHandler(ListResourcesRequestSchema, resourceHandlers.listResources);
   server.setRequestHandler(ListResourceTemplatesRequestSchema, resourceHandlers.listResourceTemplates);
   server.setRequestHandler(ReadResourceRequestSchema, resourceHandlers.readResource);

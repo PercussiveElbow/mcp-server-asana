@@ -6,38 +6,23 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { AsanaClientWrapper } from './asana-client-wrapper.js';
 
-export function createResourceHandlers(asanaClient: AsanaClientWrapper) {
+export function createResourceHandlers(asanaClient: AsanaClientWrapper, allowedProjectGid: string) {
   /**
    * Lists available resources (workspaces and resource templates)
    */
   const listResources = async (): Promise<ListResourcesResult> => {
     console.error("Received ListResourcesRequest");
     try {
-      // Fetch all workspaces from Asana
-      const workspaces = await asanaClient.listWorkspaces({
-        opt_fields: "name,gid,resource_type"
-      });
-
-      // Transform workspaces into resources
-      const workspaceResources = workspaces.map((workspace: any) => ({
-        uri: `asana://workspace/${workspace.gid}`,
-        name: workspace.name,
-        description: `Asana workspace: ${workspace.name}`
-      }));
-
-      // Add resource templates
-      const resourceTemplates = [
-        {
-          uriTemplate: "asana://project/{project_gid}",
-          name: "Asana Project Template",
-          description: "Get details for a specific Asana project by GID",
-          mimeType: "application/json"
-        }
-      ];
-
+      // Only expose the allowed project as a resource
       return {
-        resources: workspaceResources,
-        resourceTemplates: resourceTemplates
+        resources: [
+          {
+            uri: `asana://project/${allowedProjectGid}`,
+            name: `Asana project ${allowedProjectGid}`,
+            description: `Restricted Asana project (${allowedProjectGid})`
+          }
+        ],
+        resourceTemplates: []
       };
     } catch (error) {
       console.error("Error listing resources:", error);
@@ -46,65 +31,28 @@ export function createResourceHandlers(asanaClient: AsanaClientWrapper) {
   };
 
   /**
-   * Reads a resource (workspace details or project details)
+   * Reads a resource (restricted to the allowed project)
    */
   const readResource = async (request: ReadResourceRequest): Promise<ReadResourceResult> => {
     console.error("Received ReadResourceRequest:", request);
     try {
       const { uri } = request.params;
 
-      // Parse workspace URI
-      const workspaceMatch = uri.match(/^asana:\/\/workspace\/([^\/]+)$/);
-      if (workspaceMatch) {
-        return await readWorkspaceResource(workspaceMatch[1], uri);
-      }
-
       // Parse project URI
       const projectMatch = uri.match(/^asana:\/\/project\/([^\/]+)$/);
       if (projectMatch) {
-        return await readProjectResource(projectMatch[1], uri);
+        const projectId = projectMatch[1];
+        if (projectId !== allowedProjectGid) {
+          throw new Error(`Access to project ${projectId} is denied. Only project ${allowedProjectGid} is allowed.`);
+        }
+        return await readProjectResource(projectId, uri);
       }
 
-      throw new Error(`Invalid resource URI format: ${uri}`);
+      throw new Error(`Invalid or unauthorized resource URI: ${uri}`);
     } catch (error) {
       console.error("Error reading resource:", error);
-      throw error;
+      throw error instanceof Error ? error : new Error(String(error));
     }
-  };
-
-  /**
-   * Read workspace resource
-   */
-  const readWorkspaceResource = async (workspaceId: string, uri: string): Promise<ReadResourceResult> => {
-    // Get workspace details
-    const workspaces = await asanaClient.listWorkspaces({
-      opt_fields: "name,gid,resource_type,email_domains,is_organization"
-    });
-
-    const workspace = workspaces.find((ws: any) => ws.gid === workspaceId);
-
-    if (!workspace) {
-      throw new Error(`Workspace not found: ${workspaceId}`);
-    }
-
-    // Format the workspace data
-    const workspaceData = {
-      name: workspace.name,
-      id: workspace.gid,
-      type: workspace.resource_type,
-      is_organization: workspace.is_organization,
-      email_domains: workspace.email_domains,
-    };
-
-    return {
-      contents: [
-        {
-          uri,
-          mimeType: "application/json",
-          text: JSON.stringify(workspaceData, null, 2)
-        }
-      ]
-    };
   };
 
   /**
@@ -133,7 +81,7 @@ export function createResourceHandlers(asanaClient: AsanaClientWrapper) {
       }
 
       // Get custom field settings directly
-      let customFields = [];
+      let customFields: any[] = [];
       try {
         const customFieldSettings = await asanaClient.getProjectCustomFieldSettings(projectId, {
           opt_fields: "custom_field.name,custom_field.gid,custom_field.resource_type,custom_field.type,custom_field.description,custom_field.enum_options,custom_field.enum_options.gid,custom_field.enum_options.name,custom_field.enum_options.enabled,custom_field.precision,custom_field.format"
@@ -236,7 +184,8 @@ export function createResourceHandlers(asanaClient: AsanaClientWrapper) {
       };
     } catch (error) {
       console.error(`Error reading project ${projectId}:`, error);
-      throw new Error(`Failed to read project: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to read project: ${message}`);
     }
   };
 
@@ -246,12 +195,12 @@ export function createResourceHandlers(asanaClient: AsanaClientWrapper) {
   const listResourceTemplates = async (): Promise<ListResourceTemplatesResult> => {
     console.error("Received ListResourceTemplatesRequest");
     try {
-      // Define resource templates
+      // Restrict templates to only the allowed project format
       const resourceTemplates = [
         {
-          uriTemplate: "asana://project/{project_gid}",
-          name: "Asana Project Template",
-          description: "Get details for a specific Asana project by GID",
+          uriTemplate: `asana://project/${allowedProjectGid}`,
+          name: "Asana Allowed Project",
+          description: "Access to the configured Asana project only",
           mimeType: "application/json"
         }
       ];
