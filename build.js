@@ -28,8 +28,10 @@ async function main() {
       'util',
       'events',
       'buffer',
-      'querystring'
-      // Removed: 'asana', 'jsdom' to enable fully bundled runtime
+      'querystring',
+      // Externalize CJS libs to avoid dynamic require issues in ESM bundle
+      'asana',
+      'jsdom'
     ]
   });
 }
