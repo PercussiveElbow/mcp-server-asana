@@ -72,10 +72,28 @@ export class AsanaClientWrapper {
     const response = await this.tasks.searchTasksForWorkspace(workspace, searchParams);
 
     // Safety net: filter any tasks that somehow are not in the allowed project
-    const filtered = (response.data || []).filter((task: any) => {
+    const filtered = [];
+    for (const task of response.data || []) {
       const projects = Array.isArray(task?.projects) ? task.projects : [];
-      return projects.some((p: any) => p?.gid === this.allowedProjectGid);
-    });
+      
+      // Check if task is directly in allowed project
+      if (projects.some((p: any) => p?.gid === this.allowedProjectGid)) {
+        filtered.push(task);
+      }
+      // For subtasks (no projects), check if parent is in allowed project
+      else if (projects.length === 0 && task?.parent?.gid) {
+        try {
+          const parentTask = await this.tasks.getTask(task.parent.gid, { opt_fields: 'projects' });
+          const parentProjects = Array.isArray(parentTask.data?.projects) ? parentTask.data.projects : [];
+          if (parentProjects.some((p: any) => p?.gid === this.allowedProjectGid)) {
+            filtered.push(task);
+          }
+        } catch (error) {
+          // If we can't verify parent, reject for security
+          console.warn(`Could not verify parent task ${task.parent.gid} for subtask ${task.gid}`);
+        }
+      }
+    }
 
     // Transform the response to simplify custom fields if present
     const transformedData = filtered.map((task: any) => {
